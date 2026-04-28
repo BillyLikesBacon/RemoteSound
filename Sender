@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Controller</title>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <style>
+    body {
+      margin: 0; height: 100vh; background: linear-gradient(#aa0000, #440000);
+      color: white; font-family: Arial, sans-serif; display: flex;
+      flex-direction: column; align-items: center; justify-content: center;
+    }
+    h1 { font-size: 3.2rem; }
+    input {
+      font-size: 2.5rem; width: 180px; text-align: center; padding: 15px;
+      border-radius: 12px; border: none; margin: 20px 0;
+    }
+    button {
+      padding: 25px 70px; font-size: 2.3rem; background: #ffff00;
+      color: #aa0000; border: none; border-radius: 60px; font-weight: bold;
+      cursor: pointer;
+    }
+    .status { margin-top: 40px; font-size: 1.4rem; min-height: 50px; }
+  </style>
+</head>
+<body>
+  <h1>REMOTE BLAST</h1>
+  <p>Enter 4-digit code</p>
+  <input type="text" id="codeInput" maxlength="4" placeholder="1234">
+  <button id="btn">BLAST NOW</button>
+  <div class="status" id="status"></div>
+
+  <script>
+    const peer = new Peer();
+    let connection = null;
+
+    document.getElementById('btn').addEventListener('click', () => {
+      const code = document.getElementById('codeInput').value.trim();
+      const status = document.getElementById('status');
+
+      if (code.length !== 4) {
+        status.textContent = "Enter a valid 4-digit code";
+        return;
+      }
+
+      if (!connection || connection.peer !== code) {
+        connection = peer.connect(code);
+      }
+
+      if (connection.open) {
+        connection.send("BLAST");
+        status.textContent = "Blast sent!";
+      } else {
+        status.textContent = "Connecting... try pressing again";
+        connection.on('open', () => {
+          connection.send("BLAST");
+          status.textContent = "Blast sent!";
+        });
+      }
+    });
+  </script>
+</body>
+</html>
