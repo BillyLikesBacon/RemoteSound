@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Controller</title>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #050505;
+      color: #fff;
+      font-family: 'Share Tech Mono', monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(
+        0deg, transparent, transparent 2px,
+        rgba(0,0,0,0.07) 2px, rgba(0,0,0,0.07) 4px
+      );
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    .glow-ring {
+      position: absolute;
+      width: 700px; height: 700px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,220,0,0.08) 0%, transparent 70%);
+      animation: pulse 4s ease-in-out infinite;
+      pointer-events: none;
+    }
+    @keyframes pulse {
+      0%,100%{ transform:scale(1); opacity:0.5; }
+      50%{ transform:scale(1.1); opacity:1; }
+    }
+
+    .corner {
+      position: fixed;
+      width: 60px; height: 60px;
+      border-color: #2a2000;
+      border-style: solid;
+      opacity: 0.6;
+    }
+    .corner.tl { top:20px; left:20px; border-width: 2px 0 0 2px; }
+    .corner.tr { top:20px; right:20px; border-width: 2px 2px 0 0; }
+    .corner.bl { bottom:20px; left:20px; border-width: 0 0 2px 2px; }
+    .corner.br { bottom:20px; right:20px; border-width: 0 2px 2px 0; }
+
+    .container {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      padding: 40px;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    h1 {
+      font-family: 'Black Ops One', cursive;
+      font-size: clamp(2rem, 7vw, 3.6rem);
+      color: #ffdd00;
+      text-shadow: 0 0 30px rgba(255,220,0,0.6), 0 0 60px rgba(255,200,0,0.2);
+      letter-spacing: 5px;
+      margin-bottom: 6px;
+    }
+
+    .subtitle {
+      font-size: 0.8rem;
+      letter-spacing: 4px;
+      color: #555;
+      text-transform: uppercase;
+      margin-bottom: 50px;
+    }
+
+    .input-label {
+      font-size: 0.75rem;
+      letter-spacing: 4px;
+      color: #555;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .input-wrap {
+      position: relative;
+      margin-bottom: 36px;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      font-family: 'Black Ops One', cursive;
+      font-size: 3.5rem;
+      text-align: center;
+      letter-spacing: 20px;
+      padding: 20px 30px;
+      background: #0a0a0a;
+      border: 1px solid #2a2000;
+      border-radius: 14px;
+      color: #ffdd00;
+      outline: none;
+      transition: border-color 0.3s, box-shadow 0.3s;
+      box-shadow: 0 0 20px rgba(255,200,0,0.05), inset 0 0 20px rgba(0,0,0,0.5);
+    }
+
+    input[type="text"]::placeholder { color: #2a2000; letter-spacing: 12px; }
+
+    input[type="text"]:focus {
+      border-color: #554400;
+      box-shadow: 0 0 30px rgba(255,200,0,0.15), inset 0 0 20px rgba(0,0,0,0.5);
+    }
+
+    .blast-btn {
+      width: 100%;
+      font-family: 'Black Ops One', cursive;
+      font-size: clamp(1.8rem, 5vw, 2.5rem);
+      letter-spacing: 6px;
+      padding: 28px 0;
+      background: linear-gradient(135deg, #cc0000, #880000);
+      color: #fff;
+      border: none;
+      border-radius: 60px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.1s, box-shadow 0.2s;
+      box-shadow: 0 8px 40px rgba(200,0,0,0.5), 0 2px 0 rgba(255,100,100,0.2) inset;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    }
+
+    .blast-btn::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, transparent 60%);
+      border-radius: 60px;
+    }
+
+    .blast-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 14px 50px rgba(255,0,0,0.6), 0 2px 0 rgba(255,100,100,0.2) inset;
+    }
+
+    .blast-btn:active {
+      transform: translateY(2px) scale(0.98);
+      box-shadow: 0 4px 20px rgba(200,0,0,0.5);
+    }
+
+    .blast-btn.firing {
+      animation: btnfire 0.4s ease;
+    }
+
+    @keyframes btnfire {
+      0%   { background: linear-gradient(135deg,#cc0000,#880000); }
+      30%  { background: linear-gradient(135deg,#ff6600,#cc2200); box-shadow: 0 0 60px rgba(255,100,0,0.9); }
+      100% { background: linear-gradient(135deg,#cc0000,#880000); }
+    }
+
+    .status {
+      margin-top: 28px;
+      font-size: 0.95rem;
+      letter-spacing: 2px;
+      color: #555;
+      min-height: 26px;
+      transition: color 0.3s;
+    }
+    .status.ok      { color: #33ff88; text-shadow: 0 0 8px rgba(50,255,130,0.4); }
+    .status.warn    { color: #ffaa00; }
+    .status.error   { color: #ff4444; }
+    .status.sent    { color: #ffff44; text-shadow: 0 0 10px rgba(255,255,50,0.5); }
+  </style>
+</head>
+<body>
+  <div class="corner tl"></div>
+  <div class="corner tr"></div>
+  <div class="corner bl"></div>
+  <div class="corner br"></div>
+  <div class="glow-ring"></div>
+
+  <div class="container">
+    <h1>CONTROLLER</h1>
+    <p class="subtitle">Remote blast system</p>
+
+    <p class="input-label">Enter 4-digit code</p>
+    <div class="input-wrap">
+      <input type="text" id="codeInput" maxlength="4" placeholder="----" inputmode="numeric">
+    </div>
+
+    <button class="blast-btn" id="blastBtn">⚡ BLAST</button>
+
+    <div class="status" id="status"></div>
+  </div>
+
+  <script>
+    const btn      = document.getElementById('blastBtn');
+    const codeInput= document.getElementById('codeInput');
+    const statusEl = document.getElementById('status');
+
+    // Only allow digits
+    codeInput.addEventListener('input', () => {
+      codeInput.value = codeInput.value.replace(/\D/g, '').slice(0,4);
+    });
+
+    const peer = new Peer();
+    let conn = null;
+
+    function setStatus(text, cls) {
+      statusEl.textContent = text;
+      statusEl.className = 'status ' + (cls || '');
+    }
+
+    peer.on('error', (err) => setStatus('Peer error: ' + err.type, 'error'));
+
+    btn.addEventListener('click', () => {
+      const code = codeInput.value.trim();
+
+      if (code.length !== 4) {
+        setStatus('Enter a valid 4-digit code', 'error');
+        return;
+      }
+
+      // If already connected to the right peer, just send
+      if (conn && conn.peer === code && conn.open) {
+        sendBlast();
+        return;
+      }
+
+      // Close any old connection
+      if (conn) { conn.close(); conn = null; }
+
+      setStatus('Connecting...', 'warn');
+      conn = peer.connect(code);
+
+      conn.on('open', () => {
+        setStatus('Connected ✓', 'ok');
+        sendBlast();
+      });
+
+      conn.on('error', (err) => setStatus('Connection failed: ' + err.message, 'error'));
+
+      conn.on('close', () => {
+        setStatus('Disconnected', 'error');
+        conn = null;
+      });
+    });
+
+    function sendBlast() {
+      conn.send('BLAST');
+      btn.classList.remove('firing');
+      void btn.offsetWidth;
+      btn.classList.add('firing');
+      setStatus('💥 BLAST SENT!', 'sent');
+      setTimeout(() => { if(conn && conn.open) setStatus('Connected ✓','ok'); }, 2500);
+    }
+  </script>
+</body>
+</html>

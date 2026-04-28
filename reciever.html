@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Receiver</title>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Black+Ops+One&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #050505;
+      color: #fff;
+      font-family: 'Share Tech Mono', monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Scanline overlay */
+    body::after {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.08) 2px,
+        rgba(0,0,0,0.08) 4px
+      );
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    .glow-ring {
+      position: absolute;
+      width: 600px; height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,30,30,0.12) 0%, transparent 70%);
+      animation: pulse 3s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 0.6; }
+      50% { transform: scale(1.15); opacity: 1; }
+    }
+
+    .container {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      padding: 40px;
+    }
+
+    h1 {
+      font-family: 'Black Ops One', cursive;
+      font-size: clamp(2rem, 6vw, 4rem);
+      color: #ff2222;
+      text-shadow: 0 0 30px rgba(255,30,30,0.7), 0 0 60px rgba(255,30,30,0.3);
+      letter-spacing: 6px;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 0.85rem;
+      color: #666;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-bottom: 50px;
+    }
+
+    .code-label {
+      font-size: 0.75rem;
+      letter-spacing: 5px;
+      color: #555;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .code-box {
+      display: inline-flex;
+      gap: 16px;
+      background: #0f0f0f;
+      border: 1px solid #2a0000;
+      border-radius: 16px;
+      padding: 28px 50px;
+      margin-bottom: 40px;
+      box-shadow: 0 0 40px rgba(255,20,20,0.15), inset 0 0 30px rgba(0,0,0,0.5);
+      position: relative;
+    }
+
+    .code-box::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(255,50,50,0.3), transparent 50%, rgba(255,50,50,0.1));
+      pointer-events: none;
+    }
+
+    .digit {
+      font-family: 'Black Ops One', cursive;
+      font-size: clamp(3rem, 10vw, 5.5rem);
+      color: #ff3333;
+      text-shadow: 0 0 20px rgba(255,50,50,0.8);
+      width: 1ch;
+      display: inline-block;
+      transition: transform 0.2s, text-shadow 0.2s;
+    }
+
+    .digit.lit {
+      animation: digitpop 0.3s ease;
+    }
+
+    @keyframes digitpop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.3); text-shadow: 0 0 40px #ff0, 0 0 80px #ff0; }
+      100% { transform: scale(1); }
+    }
+
+    .status-bar {
+      font-size: 1rem;
+      letter-spacing: 2px;
+      color: #888;
+      min-height: 28px;
+      transition: color 0.3s;
+    }
+
+    .status-bar.connected { color: #33ff88; text-shadow: 0 0 10px rgba(50,255,130,0.5); }
+    .status-bar.blasted  { color: #ffff00; text-shadow: 0 0 15px rgba(255,255,0,0.6); font-size: 1.3rem; }
+    .status-bar.waiting  { color: #555; }
+
+    .blink { animation: blink 1.2s step-end infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    /* BLAST flash overlay */
+    .blast-flash {
+      position: fixed; inset: 0;
+      background: #ff0000;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 200;
+      transition: opacity 0.05s;
+    }
+    .blast-flash.active { opacity: 0.35; }
+
+    /* Corner decorations */
+    .corner {
+      position: fixed;
+      width: 60px; height: 60px;
+      border-color: #2a0000;
+      border-style: solid;
+      opacity: 0.6;
+    }
+    .corner.tl { top: 20px; left: 20px; border-width: 2px 0 0 2px; }
+    .corner.tr { top: 20px; right: 20px; border-width: 2px 2px 0 0; }
+    .corner.bl { bottom: 20px; left: 20px; border-width: 0 0 2px 2px; }
+    .corner.br { bottom: 20px; right: 20px; border-width: 0 2px 2px 0; }
+  </style>
+</head>
+<body>
+  <div class="blast-flash" id="flash"></div>
+  <div class="corner tl"></div>
+  <div class="corner tr"></div>
+  <div class="corner bl"></div>
+  <div class="corner br"></div>
+  <div class="glow-ring"></div>
+
+  <div class="container">
+    <h1>RECEIVER</h1>
+    <p class="subtitle">Standing by</p>
+
+    <p class="code-label">Your 4-digit code</p>
+    <div class="code-box">
+      <span class="digit" id="d0">-</span>
+      <span class="digit" id="d1">-</span>
+      <span class="digit" id="d2">-</span>
+      <span class="digit" id="d3">-</span>
+    </div>
+
+    <div class="status-bar waiting blink" id="status">Initialising...</div>
+  </div>
+
+  <audio id="audio" preload="auto">
+    <source src="https://www.myinstants.com/media/sounds/you-are-an-idiot.mp3" type="audio/mpeg">
+  </audio>
+
+  <script>
+    const statusEl = document.getElementById('status');
+    const flash    = document.getElementById('flash');
+    const audio    = document.getElementById('audio');
+    const digits   = [0,1,2,3].map(i => document.getElementById('d'+i));
+
+    function setCode(code) {
+      code.split('').forEach((ch, i) => {
+        digits[i].textContent = ch;
+        digits[i].classList.remove('lit');
+        void digits[i].offsetWidth; // reflow to restart animation
+        digits[i].classList.add('lit');
+      });
+    }
+
+    function setStatus(text, cls) {
+      statusEl.textContent = text;
+      statusEl.className = 'status-bar ' + cls;
+    }
+
+    // Generate a 4-digit code and use it as the Peer ID
+    const shortCode = Math.floor(1000 + Math.random() * 9000).toString();
+    const peer = new Peer(shortCode);
+
+    peer.on('open', (id) => {
+      setCode(id);
+      setStatus('Share this code with the controller', 'waiting');
+    });
+
+    peer.on('error', (err) => {
+      // If the ID is already taken, generate a new one
+      if (err.type === 'unavailable-id') {
+        const newCode = Math.floor(1000 + Math.random() * 9000).toString();
+        const newPeer = new Peer(newCode);
+        newPeer.on('open', (id) => { setCode(id); setStatus('Share this code with the controller','waiting'); });
+        newPeer.on('connection', handleConn);
+      } else {
+        setStatus('Error: ' + err.message, 'waiting');
+      }
+    });
+
+    peer.on('connection', handleConn);
+
+    function handleConn(conn) {
+      setStatus('Controller connected ✓', 'connected');
+
+      conn.on('data', (msg) => {
+        if (msg === 'BLAST') {
+          // Flash the screen
+          flash.classList.add('active');
+          setTimeout(() => flash.classList.remove('active'), 300);
+
+          // Play audio
+          audio.currentTime = 0;
+          audio.play().catch(() => {});
+
+          setStatus('🔊 YOU ARE AN IDIOT!!!', 'blasted');
+          setTimeout(() => setStatus('Controller connected ✓', 'connected'), 4000);
+        }
+      });
+
+      conn.on('close', () => setStatus('Controller disconnected', 'waiting'));
+    }
+  </script>
+</body>
+</html>
