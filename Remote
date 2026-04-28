@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Receiver</title>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <style>
+    body {
+      margin: 0; height: 100vh; background: #0a0000; color: white;
+      font-family: Arial, sans-serif; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; text-align: center;
+    }
+    h1 { font-size: 3.8rem; color: #ff3333; }
+    .code {
+      font-size: 5rem; letter-spacing: 12px; background: #222; padding: 20px 50px;
+      border-radius: 20px; margin: 30px 0;
+    }
+    .status { font-size: 1.6rem; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>RECEIVER READY</h1>
+  <p>Your 4-digit code:</p>
+  <div class="code" id="code">---- </div>
+  <div class="status" id="status">Waiting for connection...</div>
+
+  <audio id="audio" preload="auto">
+    <source src="https://www.myinstants.com/media/sounds/you-are-an-idiot.mp3" type="audio/mpeg">
+  </audio>
+
+  <script>
+    const peer = new Peer();
+    const audio = document.getElementById('audio');
+    const statusEl = document.getElementById('status');
+    const codeEl = document.getElementById('code');
+
+    peer.on('open', (id) => {
+      const shortCode = Math.floor(1000 + Math.random() * 9000).toString();
+      codeEl.textContent = shortCode;
+      statusEl.textContent = "Share this code with your controller";
+    });
+
+    peer.on('connection', (conn) => {
+      statusEl.textContent = "Controller Connected ✓";
+      
+      conn.on('data', (msg) => {
+        if (msg === "BLAST") {
+          audio.currentTime = 0;
+          audio.play().catch(() => {});
+          statusEl.innerHTML = "<span style='color:yellow;'>🔊 YOU ARE AN IDIOT!!!</span>";
+          setTimeout(() => statusEl.textContent = "Controller Connected ✓", 3000);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
